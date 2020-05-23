@@ -21,17 +21,19 @@
  */
 package org.esteid.sk;
 
+import org.bouncycastle.util.encoders.Hex;
+
 import javax.naming.InvalidNameException;
 import javax.naming.NamingException;
 import javax.naming.ldap.LdapName;
 import javax.naming.ldap.Rdn;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateEncodingException;
-import java.security.cert.CertificateParsingException;
-import java.security.cert.X509Certificate;
+import java.security.cert.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -59,14 +61,19 @@ public final class CertificateHelpers {
         try {
             LdapName ldapDN = new LdapName(c.getSubjectX500Principal().getName());
             for (Rdn rdn : ldapDN.getRdns()) {
-                System.out.println(rdn.toString());
                 if (rdn.getValue() instanceof byte[]) {
-                    //m.put(rdn.getType(), HexUtils.bin2hex((byte[]) rdn.getValue()));
-                    //logger.trace("{} {}", rdn.getType(), HexUtils.bin2hex((byte[]) rdn.getValue()));
-                    m.put(rdn.getType(), "BINARY TODO");
+                    byte[] v = (byte[]) rdn.getValue();
+                    m.put(rdn.getType(), Hex.toHexString(v));
+                    if (v[0] == 0x13)
+                        m.put(rdn.getType(), new String(Arrays.copyOfRange(v, 2, v[1] + 2), StandardCharsets.US_ASCII));
+                    else if (v[0] == 0x0c)
+                        m.put(rdn.getType(), new String(Arrays.copyOfRange(v, 2, v[1] + 2), StandardCharsets.UTF_8));
+                    else
+                        System.out.println(rdn.toString());
                 } else if (rdn.getValue() instanceof String) {
                     m.put(rdn.getType(), rdn.getValue().toString());
-                }
+                } else
+                    System.out.println(rdn.toString());
             }
         } catch (InvalidNameException e) {
             e.printStackTrace();
@@ -122,5 +129,14 @@ public final class CertificateHelpers {
 
     public static Collection<X509Certificate> filter_by_algorithm(Collection<X509Certificate> i, String algo) {
         return i.stream().filter(c -> c.getPublicKey().getAlgorithm().equals(algo)).collect(Collectors.toList());
+    }
+
+    public static X509Certificate pem2crt(String pem) throws CertificateException {
+        pem = pem.replaceFirst("-----BEGIN CERTIFICATE-----", "").replaceAll("-----END CERTIFICATE-----", "");
+        return (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(new ByteArrayInputStream(Base64.getDecoder().decode(pem)));
+    }
+
+    public static Optional<String> crt2idcode(X509Certificate cert) {
+        return Optional.ofNullable(cert2subjectmap(cert).getOrDefault("2.5.4.5", null)).map(e -> e.startsWith("PNOEE-") ? e.substring(6) : e);
     }
 }
