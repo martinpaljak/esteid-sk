@@ -21,6 +21,9 @@
  */
 package org.esteid.sk;
 
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.x509.CertificatePolicies;
+import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.util.encoders.Hex;
 
 import javax.naming.InvalidNameException;
@@ -49,7 +52,7 @@ public final class CertificateHelpers {
         if (m.containsKey("O")) {
             if (m.get("O").toUpperCase().equals("ESTEID (MOBIIL-ID)"))
                 return false;
-            if (m.get("O").toUpperCase().equals("Mobile-ID"))
+            if (m.get("O").toUpperCase().equals("MOBILE-ID"))
                 return false;
         }
         return true;
@@ -81,10 +84,19 @@ public final class CertificateHelpers {
         return m;
     }
 
-    public boolean isDigiID(X509Certificate c) {
-        System.out.println("Extensions critical");
-        System.out.println(Arrays.toString(c.getCriticalExtensionOIDs().toArray()));
-        return false;
+    public static Set<String> getPolicies(X509Certificate c) {
+        try {
+            X509CertificateHolder holder = new X509CertificateHolder(c.getEncoded());
+            CertificatePolicies policies = CertificatePolicies.fromExtensions(holder.getExtensions());
+            return Arrays.asList(policies.getPolicyInformation()).stream().map(e -> e.getPolicyIdentifier().toString()).collect(Collectors.toSet());
+        } catch (IOException | CertificateException e) {
+            throw new RuntimeException("Could not parse certificate: " + e.getMessage(), e);
+        }
+    }
+
+    // Listed in 2.2.3 https://www.skidsolutions.eu/upload/files/SK-CPR-ESTEID2018-EN-v1_2_20200630.pdf
+    public static boolean isDigiID(X509Certificate c) {
+        return getPolicies(c).contains("1.3.6.1.4.1.51361.1.1.3");
     }
 
     public static String getCN(X509Certificate c) throws CertificateParsingException {
