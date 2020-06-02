@@ -4,3 +4,4 @@
 *.iml
 /fake.ca
 pom.xml.versionsBackup
+.mvn/wrapper/maven-wrapper.jar
