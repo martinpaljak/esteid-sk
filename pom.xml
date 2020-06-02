@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>esteid-sk</artifactId>
-    <version>20.05.24-SNAPSHOT</version>
+    <version>20.06.02</version>
 
     <dependencies>
         <!-- CA faking -->
