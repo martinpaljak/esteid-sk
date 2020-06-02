@@ -32,9 +32,7 @@ import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 import javax.naming.ldap.InitialLdapContext;
 import javax.naming.ldap.LdapContext;
-import java.io.ByteArrayInputStream;
 import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.*;
 
@@ -67,7 +65,6 @@ public final class LDAP {
             scope.setSearchScope(SearchControls.SUBTREE_SCOPE);
             // Search
             NamingEnumeration<SearchResult> results = ctx.search("'c=EE'", "(serialNumber=" + q + ")", scope);
-            CertificateFactory factory = CertificateFactory.getInstance("X509");
             while (results.hasMoreElements()) {
                 SearchResult r = results.nextElement();
                 logger.trace("{} has {}", q, r.getName());
@@ -77,7 +74,7 @@ public final class LDAP {
                     throw new NamingException("Result does not contain a certificate!?");
                 }
                 byte[] cert = (byte[]) crt.get();
-                result.put(r.getName(), (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(cert)));
+                result.put(r.getName(), CertificateHelpers.bytes2crt(cert));
             }
         } finally {
             if (ctx != null)

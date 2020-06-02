@@ -21,97 +21,39 @@
  */
 package org.esteid.sk;
 
-import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.x509.CertificatePolicies;
 import org.bouncycastle.cert.X509CertificateHolder;
-import org.bouncycastle.util.encoders.Hex;
 
-import javax.naming.InvalidNameException;
-import javax.naming.NamingException;
-import javax.naming.ldap.LdapName;
-import javax.naming.ldap.Rdn;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.math.BigInteger;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.*;
-import java.util.*;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Collection;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public final class CertificateHelpers {
 
-    // Read: SSH can be done with it.
-    public static boolean isCardAuthenticationKey(X509Certificate c) {
-        boolean[] ku = c.getKeyUsage();
-        // NonRepudiation
-        if (ku != null && ku[1] == true)
-            return false;
-        Map<String, String> m = cert2subjectmap(c);
-        if (m.containsKey("O")) {
-            if (m.get("O").toUpperCase().equals("ESTEID (MOBIIL-ID)"))
-                return false;
-            if (m.get("O").toUpperCase().equals("MOBILE-ID"))
-                return false;
-        }
-        return true;
-    }
-
-    // Extract meaningful values from subject to a handy map
-    public static Map<String, String> cert2subjectmap(X509Certificate c) {
-        Map<String, String> m = new HashMap<>();
+    public static X509CertificateHolder crt2holder(X509Certificate c) {
         try {
-            LdapName ldapDN = new LdapName(c.getSubjectX500Principal().getName());
-            for (Rdn rdn : ldapDN.getRdns()) {
-                if (rdn.getValue() instanceof byte[]) {
-                    byte[] v = (byte[]) rdn.getValue();
-                    m.put(rdn.getType(), Hex.toHexString(v));
-                    if (v[0] == 0x13)
-                        m.put(rdn.getType(), new String(Arrays.copyOfRange(v, 2, v[1] + 2), StandardCharsets.US_ASCII));
-                    else if (v[0] == 0x0c)
-                        m.put(rdn.getType(), new String(Arrays.copyOfRange(v, 2, v[1] + 2), StandardCharsets.UTF_8));
-                    else
-                        System.out.println(rdn.toString());
-                } else if (rdn.getValue() instanceof String) {
-                    m.put(rdn.getType(), rdn.getValue().toString());
-                } else
-                    System.out.println(rdn.toString());
-            }
-        } catch (InvalidNameException e) {
-            e.printStackTrace();
-        }
-        return m;
-    }
-
-    public static Set<String> getPolicies(X509Certificate c) {
-        try {
-            X509CertificateHolder holder = new X509CertificateHolder(c.getEncoded());
-            CertificatePolicies policies = CertificatePolicies.fromExtensions(holder.getExtensions());
-            return Arrays.asList(policies.getPolicyInformation()).stream().map(e -> e.getPolicyIdentifier().toString()).collect(Collectors.toSet());
-        } catch (IOException | CertificateException e) {
+            return new X509CertificateHolder(c.getEncoded());
+        } catch (CertificateException | IOException e) {
             throw new RuntimeException("Could not parse certificate: " + e.getMessage(), e);
         }
     }
 
-    // Listed in 2.2.3 https://www.skidsolutions.eu/upload/files/SK-CPR-ESTEID2018-EN-v1_2_20200630.pdf
-    public static boolean isDigiID(X509Certificate c) {
-        return getPolicies(c).contains("1.3.6.1.4.1.51361.1.1.3");
+    // get all policy oid-s
+    public static Set<String> getPolicies(X509CertificateHolder c) {
+        CertificatePolicies policies = CertificatePolicies.fromExtensions(c.getExtensions());
+        return Arrays.asList(policies.getPolicyInformation()).stream().map(e -> e.getPolicyIdentifier().toString()).collect(Collectors.toSet());
     }
 
-    public static String getCN(X509Certificate c) throws CertificateParsingException {
-        try {
-            LdapName ldapDN = new LdapName(c.getSubjectX500Principal().getName());
-            for (Rdn rdn : ldapDN.getRdns()) {
-                if (rdn.getType().equals("CN"))
-                    return rdn.getValue().toString();
-            }
-            // If the certificate does not have CN, make a hash of the certificate
-            // This way we always return something if we have a valid certificate
-            return new BigInteger(1, MessageDigest.getInstance("SHA-256").digest(c.getEncoded())).toString(16);
-        } catch (NamingException | NoSuchAlgorithmException | CertificateEncodingException e) {
-            throw new CertificateParsingException("Could not fetch common name from certificate", e);
-        }
+    public static Set<String> getPolicies(X509Certificate c) {
+        return getPolicies(crt2holder(c));
     }
 
     public static String crt2pem(X509Certificate c) throws IOException {
@@ -122,25 +64,17 @@ public final class CertificateHelpers {
         }
     }
 
-    public static boolean isMobileID(X509Certificate cert) {
-        if (cert.getSubjectX500Principal().toString().contains("MOBIIL-ID"))
-            return true;
-        return false;
-    }
-
-    public static boolean isDigitalSignatureCertificate(X509Certificate cert) {
-        // Check for NonRepudiation flag
-        if (!cert.getKeyUsage()[1])
-            return false;
-        return true;
-    }
-
-    public static boolean isCardAuthCertificate(X509Certificate cert) {
-        return !isMobileID(cert) && !isDigitalSignatureCertificate(cert);
-    }
-
     public static Collection<X509Certificate> filter_by_algorithm(Collection<X509Certificate> i, String algo) {
         return i.stream().filter(c -> c.getPublicKey().getAlgorithm().equals(algo)).collect(Collectors.toList());
+    }
+
+    static X509Certificate bytes2crt(byte[] c) {
+        try {
+            CertificateFactory f = CertificateFactory.getInstance("X.509");
+            return (X509Certificate) f.generateCertificate(new ByteArrayInputStream(c));
+        } catch (CertificateException e) {
+            throw new RuntimeException("Bad certificate in system: " + e.getMessage(), e);
+        }
     }
 
     public static X509Certificate pem2crt(String pem) throws CertificateException {
@@ -148,7 +82,8 @@ public final class CertificateHelpers {
         return (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(new ByteArrayInputStream(Base64.getDecoder().decode(pem)));
     }
 
-    public static Optional<String> crt2idcode(X509Certificate cert) {
-        return Optional.ofNullable(cert2subjectmap(cert).getOrDefault("2.5.4.5", null)).map(e -> e.startsWith("PNOEE-") ? e.substring(6) : e);
+    public static X509Certificate pem2crt(InputStream in) throws CertificateException {
+        String pem = String.join("", new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8)).lines().collect(Collectors.toList()));
+        return pem2crt(pem);
     }
 }
