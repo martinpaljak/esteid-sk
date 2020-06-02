@@ -21,7 +21,6 @@
  */
 package org.esteid.sk;
 
-import org.bouncycastle.asn1.x509.CertificatePolicies;
 import org.bouncycastle.cert.X509CertificateHolder;
 
 import java.io.*;
@@ -30,10 +29,8 @@ import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 public final class CertificateHelpers {
@@ -46,22 +43,16 @@ public final class CertificateHelpers {
         }
     }
 
-    // get all policy oid-s
-    public static Set<String> getPolicies(X509CertificateHolder c) {
-        CertificatePolicies policies = CertificatePolicies.fromExtensions(c.getExtensions());
-        return Arrays.asList(policies.getPolicyInformation()).stream().map(e -> e.getPolicyIdentifier().toString()).collect(Collectors.toSet());
-    }
-
-    public static Set<String> getPolicies(X509Certificate c) {
-        return getPolicies(crt2holder(c));
-    }
-
     public static String crt2pem(X509Certificate c) throws IOException {
         try {
-            return "-----BEGIN CERTIFICATE-----\n" + Base64.getMimeEncoder().encodeToString(c.getEncoded()) + "\n-----END CERTIFICATE-----";
+            return bytes2pem(c.getEncoded());
         } catch (CertificateEncodingException e) {
             throw new IOException(e);
         }
+    }
+
+    public static String bytes2pem(byte[] bytes) {
+        return "-----BEGIN CERTIFICATE-----\n" + Base64.getMimeEncoder().encodeToString(bytes) + "\n-----END CERTIFICATE-----";
     }
 
     public static Collection<X509Certificate> filter_by_algorithm(Collection<X509Certificate> i, String algo) {

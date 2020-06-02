@@ -28,4 +28,10 @@ public class TestSKCertificate {
         SKCertificate c = SKCertificate.fromPEM(getClass().getResourceAsStream("sk-esteid.pem"));
         c.getPersonalCode();
     }
+
+    @Test
+    public void testToJava() {
+        SKCertificate c = SKCertificate.fromPEM(getClass().getResourceAsStream("serial-pno.pem"));
+        c.toJava();
+    }
 }
