@@ -1,7 +1,7 @@
-/.idea
-*~
-/target
+**/target
 *.iml
+*~
+/.idea
+/.mvn/wrapper/maven-wrapper.jar
 /fake.ca
 pom.xml.versionsBackup
-.mvn/wrapper/maven-wrapper.jar
