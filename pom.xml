@@ -7,12 +7,19 @@
     <parent>
         <groupId>com.github.martinpaljak</groupId>
         <artifactId>metacard</artifactId>
-        <version>20.06.04</version>
+        <version>21.04.02</version>
     </parent>
 
     <artifactId>esteid-sk</artifactId>
     <version>20.06.5-SNAPSHOT</version>
-
+    <repositories>
+        <!-- For picking up latest metacard -->
+        <repository>
+            <id>javacard-pro</id>
+            <name>javacard.pro</name>
+            <url>https://javacard.pro/maven/</url>
+        </repository>
+    </repositories>
     <dependencies>
         <!-- CA faking -->
         <dependency>
