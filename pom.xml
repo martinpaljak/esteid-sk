@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>esteid-sk</artifactId>
-    <version>20.06.5-SNAPSHOT</version>
+    <version>21.12.31</version>
     <repositories>
         <!-- For picking up latest metacard -->
         <repository>
