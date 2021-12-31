@@ -38,6 +38,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
@@ -60,11 +61,15 @@ public class FakeEstEIDCA {
     private static final SecureRandom random;
 
     static {
-        random = new SecureRandom();
-        random.nextBytes(new byte[2]);
-        // Add BouncyCastle if not present, we will need it for XXX
-        if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
-            Security.addProvider(new BouncyCastleProvider());
+        try {
+            random = SecureRandom.getInstanceStrong();
+            random.nextBytes(new byte[2]);
+            // Add BouncyCastle if not present, we will need it for XXX
+            if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+                Security.addProvider(new BouncyCastleProvider());
+            }
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("Can't run", e);
         }
     }
 
@@ -75,7 +80,7 @@ public class FakeEstEIDCA {
     private X509Certificate esteidCert;
 
     static X509CertificateHolder getRealCert(String path) throws IOException {
-        try (PEMParser pem = new PEMParser(new InputStreamReader(FakeEstEIDCA.class.getResourceAsStream(path), "UTF-8"))) {
+        try (PEMParser pem = new PEMParser(new InputStreamReader(FakeEstEIDCA.class.getResourceAsStream(path), StandardCharsets.UTF_8))) {
             X509CertificateHolder crt = (X509CertificateHolder) pem.readObject();
             return crt;
         }
@@ -246,7 +251,7 @@ public class FakeEstEIDCA {
             real = getRealCert("sk-auth.pem");
         }
         log.trace("Generating from subject: " + real.getSubject());
-        log.trace("Generating subject: " + new X500Name(subject).toString());
+        log.trace("Generating subject: " + new X500Name(subject));
 
         JcaX509v3CertificateBuilder builder = new JcaX509v3CertificateBuilder(real.getIssuer(), serial, startDate, endDate, new X500Name(subject), pubkey);
 
@@ -330,7 +335,7 @@ public class FakeEstEIDCA {
             real = getRealCert("sk-auth-ecc.pem");
         }
         log.trace("Generating from subject: " + real.getSubject());
-        log.trace("Generating subject: " + new X500Name(subject).toString());
+        log.trace("Generating subject: " + new X500Name(subject));
 
         JcaX509v3CertificateBuilder builder = new JcaX509v3CertificateBuilder(real.getIssuer(), serial, startDate, endDate, new X500Name(subject), pubkey);
 

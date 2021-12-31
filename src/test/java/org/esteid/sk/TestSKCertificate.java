@@ -1,7 +1,14 @@
 package org.esteid.sk;
 
+import org.bouncycastle.asn1.ASN1IA5String;
+import org.bouncycastle.asn1.x509.AccessDescription;
+import org.bouncycastle.asn1.x509.AuthorityInformationAccess;
+import org.bouncycastle.asn1.x509.GeneralName;
+import org.bouncycastle.cert.X509CertificateHolder;
 import org.testng.Assert;
 import org.testng.annotations.Test;
+
+import java.util.Arrays;
 
 public class TestSKCertificate {
 
@@ -33,5 +40,20 @@ public class TestSKCertificate {
     public void testToJava() {
         SKCertificate c = SKCertificate.fromPEM(getClass().getResourceAsStream("serial-pno.pem"));
         c.toJava();
+    }
+
+
+    @Test
+    public void testParseAIA() throws Exception {
+        X509CertificateHolder holder = new X509CertificateHolder(CertificateHelpers.pem2crt(getClass().getResourceAsStream("serial-pno.pem")).getEncoded());
+
+        AuthorityInformationAccess authorityInformationAccess = AuthorityInformationAccess.fromExtensions(holder.getExtensions());
+        for (AccessDescription accessDescription : authorityInformationAccess.getAccessDescriptions()) {
+            // URI for OCSP
+            if (accessDescription.getAccessMethod().equals(AccessDescription.id_ad_ocsp) && accessDescription.getAccessLocation().getTagNo() == GeneralName.uniformResourceIdentifier) {
+                // This is IA5String
+                Assert.assertEquals(ASN1IA5String.getInstance(accessDescription.getAccessLocation().getName()).getString(), "http://aia.sk.ee/esteid2018");
+            }
+        }
     }
 }

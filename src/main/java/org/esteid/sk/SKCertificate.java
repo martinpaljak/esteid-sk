@@ -101,7 +101,7 @@ public class SKCertificate {
     }
 
     Optional<String> getSingle(ASN1ObjectIdentifier oid) {
-        RDN rdn[] = c.getSubject().getRDNs(oid);
+        RDN[] rdn = c.getSubject().getRDNs(oid);
         if (rdn.length == 0)
             return Optional.empty();
         if (rdn.length != 1)
