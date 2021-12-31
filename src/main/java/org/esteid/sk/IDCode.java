@@ -58,10 +58,7 @@ public final class IDCode {
             }
         }
         // check
-        if (csum == original[original.length - 1]) {
-            return true;
-        }
-        return false;
+        return csum == original[original.length - 1];
     }
 
     public static List<String> extract(String s) {

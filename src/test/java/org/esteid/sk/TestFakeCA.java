@@ -11,7 +11,7 @@ import java.security.spec.ECGenParameterSpec;
 import java.util.Date;
 
 public class TestFakeCA {
-    private static File cafile = new File("fake.ca");
+    private static final File cafile = new File("fake.ca");
 
     private static FakeEstEIDCA generateOrLoadCA() throws Exception {
         FakeEstEIDCA ca = new FakeEstEIDCA();
