@@ -171,6 +171,10 @@ public class SKCertificate {
         return hasPolicyOrPrefix("1.3.6.1.4.1.10015.1.3") || getO().equals(Optional.of("ESTEID (MOBIIL-ID)"));
     }
 
+    public boolean isSmartID() {
+        return hasPolicyOrPrefix("1.3.6.1.4.1.10015.17.2");
+    }
+
     public boolean isSigningCertificate() {
         return getPolicies().contains("0.4.0.194112.1.2") || getOU().equals(Optional.of("digital signature"));
     }
